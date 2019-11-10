@@ -6,16 +6,38 @@ from rlbot.utils.structures.game_data_struct import GameTickPacket
 from util.orientation import Orientation
 from util.vec import Vec3
 
+class GameObject():
+    def __init__(self):
+        self.location = Vec3([0,0,0])
+        self.velocity = Vec3([0,0,0])
+        self.rotation = Vec3([0,0,0])
+        self.rvelocity = Vec3([0,0,0])
+        
+        self.local_location = Vec3([0,0,0])
+
+class Car(GameObject):
+    def __init__(self):
+        super().__init__(self)
+        self.me.matrix = [Vec3[0,0,0],Vec3[0,0,0],Vec3[0,0,0]]
+        self.me.boost = 0.0
+    
+
+class Ball(GameObject):
+    def __init__(self):
+        super().__init__(self)
+
 class MyBot(BaseAgent):
 
     def initialize_agent(self):
         # This runs once before the bot starts up
         self.controller_state = SimpleControllerState()
+        self.me = Car()
+        self.ball = Ball()
 
-    def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
-        ball_location = Vec3(packet.game_ball.physics.location)
+    def get_output(self, gamePacket: GameTickPacket) -> SimpleControllerState:
+        ball_location = Vec3(gamePacket.game_ball.physics.location)
 
-        my_car = packet.game_cars[self.index]
+        my_car = gamePacket.game_cars[self.index]
         car_location = Vec3(my_car.physics.location)
 
         car_to_ball = ball_location - car_location
@@ -26,11 +48,8 @@ class MyBot(BaseAgent):
 
         steer_correction_radians = find_correction(car_direction, car_to_ball)
         
-        #calculate the amount of turning to do to face the ball
-        distance = math.sqrt(math.pow(car_to_ball.x, 2) + math.pow(car_to_ball.y, 2))
-        #turn = find_turn(steer_correction_radians)
-        #speed = find_speed(steer_correction_radians, distance)
-        
+        #calculate the car's next movement
+        distance = math.sqrt(math.pow(car_to_ball.x, 2) + math.pow(car_to_ball.y, 2))      
         speed, turn = find_movement(steer_correction_radians, distance)
             
         self.controller_state.throttle = speed
@@ -39,9 +58,48 @@ class MyBot(BaseAgent):
         message = f"speed: {speed} | turn: {turn}"
         action_display = message
 
-        draw_debug(self.renderer, my_car, packet.game_ball, action_display)
+        draw_debug(self.renderer, my_car, gamePacket.game_ball, action_display)
 
         return self.controller_state
+    
+    def preprocess(self, gamePacket: GameTickPacket):
+        #load data about self
+        self.me.location = Vec3(gamePacket.game_cars[self.index].physics.location)
+        self.me.velocity = Vec3(gamePacket.game_cars[self.index].physics.velocity)
+        self.me.rotation = Vec3(gamePacket.game_cars[self.index].physics.rotation)
+        self.me.rvelocity = Vec3(gamePacket.game_cars[self.index].physics.angular_velocity)
+        self.me.matrix = build_rotator_matrix(self.me.rotation)
+        self.me.boost = gamePacket.game_cars[self.index].boost
+        
+        #load data about the ball
+        self.ball.location = Vec3(gamePacket.game_ball.physics.location)
+        self.ball.velocity = Vec3(gamePacket.game_ball.physics.velocity)
+        self.ball.rotation = Vec3(gamePacket.game_ball.physics.rotation)
+        self.ball.rvelocity = Vec3(gamePacket.game_ball.physics.angular_velocity)
+        
+        self.ball.local_location = to_local(self.ball.location, self.me.location)
+
+def to_local(target_vector: Vec3, home_vector: Vec3, matrix) -> Vec3:
+    absolute_vector = target_vector - home_vector
+    x = absolute_vector.dot(matrix[0])
+    y = absolute_vector.dot(matrix[1])
+    z = absolute_vector.dot(matrix[2])
+    return Vec3(x,y,z)
+
+def build_rotator_matrix(rotation: Vec3):
+    CP = math.cos(rotation.x)
+    SP = math.sin(rotation.x)
+    CR = math.cos(rotation.y)
+    SR = math.sin(rotation.y)
+    CY = math.cos(rotation.z)
+    SY = math.sin(rotation.z)
+
+    matrix = []
+    matrix.append(Vec3([CP*CY, CP*SY, SP]))
+    matrix.append(Vec3([CY*SP*SR-CR*SY, SY*SP*SR+CR*CY, -CP * SR]))
+    matrix.append(Vec3([-CR*CY*SP-SR*SY, -CR*SY*SP+SR*CY, CP*CR]))
+    return matrix
+    
     
 def find_movement(angle: float, distance: float):
     #values are throttle, steer
@@ -81,19 +139,6 @@ def find_movement(angle: float, distance: float):
         else:
             speed = 0.5
     return speed, turn_rate
-
-def find_turn(angle: float) -> float:
-    if angle > math.pi / 12:
-        turnRate = -1.0
-    elif angle < -math.pi / 12:
-        turnRate = 1.0
-    else:
-        turnRate = 0
-        
-    return turnRate
-
-def find_speed(angle:float, distance: float) -> float:
-    return 1.0
 
 def find_correction(current: Vec3, ideal: Vec3) -> float:
     # Finds the angle from current to ideal vector in the xy-plane. Angle will be between -pi and +pi.
