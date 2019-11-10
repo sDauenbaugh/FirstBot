@@ -1,6 +1,7 @@
 import math
 
 from util.vec import Vec3
+from rlbot.messages.flat.ControllerState import ControllerStateAddYaw
 
 
 # This is a helper class for calculating directions relative to your car. You can extend it or delete if you want.
@@ -10,11 +11,18 @@ class Orientation:
     Use this to find the direction of cars: forward, right, up.
     It can also be used to find relative locations.
     """
-
-    def __init__(self, rotation):
-        self.yaw = float(rotation.yaw)
-        self.roll = float(rotation.roll)
-        self.pitch = float(rotation.pitch)
+    
+    #accepts either a rotation vector or a set of rotation values
+    def __init__(self, pitch: float or 'rotation'=0, yaw: float=0, roll: float=0):
+        if hasattr(pitch, 'pitch'):
+            rotation = pitch
+            self.yaw = float(rotation.yaw)
+            self.roll = float(rotation.roll)
+            self.pitch = float(rotation.pitch)
+        else:
+            self.pitch = pitch
+            self.yaw = yaw
+            self.roll = roll
 
         cr = math.cos(self.roll)
         sr = math.sin(self.roll)
