@@ -5,6 +5,7 @@ from rlbot.utils.structures.game_data_struct import GameTickPacket
 
 from util.orientation import Orientation, relative_location
 from util.vec import Vec3
+from util.util import predict_ball_path
 
 from states import *
 
@@ -45,7 +46,8 @@ class MyBot(BaseAgent):
         my_car = gamePacket.game_cars[self.index]
         message = f"speed: {controller_state.throttle} | turn: {controller_state.steer}"
         action_display = message
-        draw_debug(self.renderer, my_car, gamePacket.game_ball, action_display)
+        ball_path = predict_ball_path(self)
+        draw_debug(self.renderer, my_car, gamePacket.game_ball, action_display, ball_path)
 
         return controller_state
     
@@ -66,10 +68,12 @@ class MyBot(BaseAgent):
         self.ball.local_location = relative_location(self.me.location, self.me.rotation, self.ball.location)
 
 
-def draw_debug(renderer, car, ball, action_display):
+def draw_debug(renderer, car, ball, action_display, ball_path = None):
     renderer.begin_rendering()
     # draw a line from the car to the ball
     renderer.draw_line_3d(car.physics.location, ball.physics.location, renderer.white())
     # print the action that the bot is taking
     renderer.draw_string_3d(car.physics.location, 2, 2, action_display, renderer.white())
+    #draw the ball's predicted path
+    renderer.draw_polyline_3d(ball_path, renderer.red())
     renderer.end_rendering()

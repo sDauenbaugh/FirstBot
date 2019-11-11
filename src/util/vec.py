@@ -96,3 +96,7 @@ class Vec3:
         """Returns the angle to the ideal vector. Angle will be between 0 and pi."""
         cos_ang = self.dot(ideal) / (self.length() * ideal.length())
         return math.acos(cos_ang)
+    
+    #returns the Vector3 as a python triple
+    def to_triple(self):
+        return [self.x, self.y, self.z]
