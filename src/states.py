@@ -2,17 +2,68 @@ import math
 from rlbot.agents.base_agent import SimpleControllerState
 
 class State():
-    def __init__(self):
-        pass
+    """State objects dictate the bot's current objective.
     
-    def execute(self, agent):
-        pass
-
-class BallChase(State):
+    These objects are used to control the behavior of the bot at a high level. States are reponsible for determining
+    which controller to use as well as what actions the car needs to take. States do not directly determine controller inputs.
+    State names should be descriptive and unique.
+    
+    Currently Implemented States:
+        BallChase
+        
+    States in Development:
+        Shoot
+        Defend
+        
+    Attributes: expired (bool)
+    
+    """
     def __init__(self):
+        """Creates a new unexpired state"""
         self.expired = False
     
     def execute(self, agent):
+        """Executes the State's behavior.
+        
+        This function must be overridden by other States.
+        
+        Attributes:
+            agent (BaseAgent): The bot
+            
+        Returns:
+            Nothing.
+            When overridden this function should return a SimpleControllerState() containing the commands for the car.
+            
+        """
+        pass
+
+class BallChase(State):
+    """BallChase aims to drive the car straight toward the ball
+    
+    This State has no regard for other cars or the movement of the ball. This is a simple state not meant for use in-game.
+    
+    Note:
+        This state does not expire
+    
+    """
+    def __init__(self):
+        """Creates an unexpired instance of BallChase"""
+        super().__init__()
+    
+    def execute(self, agent):
+        """Attempts to drive the car toward the ball.
+        
+        Overrides the State class's execute function. The ground controller is automatically used and the target 
+        location is set to the ball's current location.
+        
+        Attributes:
+            agent (BaseAgent): The bot
+            
+        Returns:
+            SimpleControllerState: the set of commands to give the bot.
+            
+        """
+        
         State.execute(self, agent)
         target_location = agent.ball.local_location
         
@@ -20,14 +71,19 @@ class BallChase(State):
         
     
 class Shoot(State):
+    """Shoot attempts to hit the ball toward the opponent's goal"""
     def __init__(self):
-        pass
+        """Creates an instance of Shoot"""
+        super().__init__()
     
 class Defend(State):
+    """Defend attempts to divert the ball away from the bot's own goal"""
     def __init__(self):
-        pass
+        """Creates an instance of Defend"""
+        super().__init__()
     
 def groundController(agent, target_location):
+    """Uses ground-only controls to move the bot toward a target location"""
     controllerState = SimpleControllerState()
     ball_direction = target_location;
     distance = target_location.flat().length()
