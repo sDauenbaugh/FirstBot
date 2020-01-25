@@ -1,6 +1,11 @@
 import math
 from rlbot.agents.base_agent import SimpleControllerState
 
+import util.util as util
+from util.vec import Vec3
+from util.orientation import relative_location
+
+
 class State():
     """State objects dictate the bot's current objective.
     
@@ -43,12 +48,19 @@ class BallChase(State):
     This State has no regard for other cars or the movement of the ball. This is a simple state not meant for use in-game.
     
     Note:
-        This state does not expire
+        Expires after 30 ticks
     
     """
     def __init__(self):
         """Creates an unexpired instance of BallChase"""
         super().__init__()
+        self.ticks = 0
+        
+    def checkExpire(self):
+        """Determines if the state is no longer useful"""
+        self.ticks = self.ticks + 1
+        if self.ticks > 30:
+            self.expired = True
     
     def execute(self, agent):
         """Attempts to drive the car toward the ball.
@@ -63,6 +75,7 @@ class BallChase(State):
             SimpleControllerState: the set of commands to give the bot.
             
         """
+        self.checkExpire()
         
         State.execute(self, agent)
         target_location = agent.ball.local_location
@@ -75,6 +88,43 @@ class Shoot(State):
     def __init__(self):
         """Creates an instance of Shoot"""
         super().__init__()
+        
+    def checkExpire(self, agent):
+        """Determines if the state is no longer useful"""
+        if util.sign(agent.ball.location.y) == util.sign(agent.team):
+            self.expired = True
+            
+    def checkAvailable(self, agent):
+        """Determines if the state is an available option"""
+        if util.sign(agent.ball.location.y) != util.sign(agent.team):
+            return True
+        else:
+            return False
+        
+    def execute(self, agent):
+        """Drafts a set of commands to shoot the ball toward the opponent's goal
+        
+        Attributes:
+            agent (BaseAgent): the bot
+            
+        Returns:
+            SimpleControllerState: The next set of commands to execute.
+        
+        """
+        self.checkExpire(agent)
+        
+        team = util.sign(agent.team)
+        targetGoal = util.GOAL_POSITION
+        targetGoal.y = targetGoal.y * team
+        
+        ball_to_goal = targetGoal - agent.ball.location
+        #distance_to_goal = ball_to_goal.length()
+        direction_to_goal = ball_to_goal.normalized()
+        
+        aim_location = agent.ball.location - (direction_to_goal * util.BALL_RADIUS)
+        local_target = relative_location(agent.me.location, agent.me.rotation, aim_location)
+        
+        return groundController(agent, local_target)
     
 class Defend(State):
     """Defend attempts to divert the ball away from the bot's own goal"""
@@ -83,7 +133,14 @@ class Defend(State):
         super().__init__()
     
 def groundController(agent, target_location):
-    """Uses ground-only controls to move the bot toward a target location"""
+    """Gives a set of commands to move the car along the ground toward a target location
+    
+    Attributes:
+        target_location (Vec3): The location the car wants to aim for
+        
+    Returns:
+        SimpleControllerState: the set of commands to achieve the goal
+    """
     controllerState = SimpleControllerState()
     ball_direction = target_location;
     distance = target_location.flat().length()

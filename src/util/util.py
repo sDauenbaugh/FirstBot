@@ -11,6 +11,7 @@ FIELD_HEIGHT = 2044 #uu
 GOAL_WIDTH = 1786 #uu
 GOAL_HEIGHT = 643 #uu
 GOAL_HEIGHT_EXACT = 642.775 #uu
+GOAL_POSITION = Vec3(0, 5120, GOAL_HEIGHT/2) #This position is the center of the orange goal. Multiply y by -1 for blue goal.
 
 """Boost Pad Measurements"""
 BOOST_HEIGHT_SMALL = 165 #uu
@@ -35,7 +36,7 @@ BOOST_CONSUMPTION_RATE = 33.3 #boost/s
 JUMP_VELOCITY = 300 #uu/s instantaneous increase
 JUMP_MAX_DURATION = 200 #ms
 JUMP_VELOCITY_ACCELERATION = 1400 #uu/s^2 during duration of jump
-BOOST+MAX_AMOUNT = 100
+BOOST_MAX_AMOUNT = 100
 BOOST_START_AMOUNT = 33.3
 
 """Ball Measurements"""
@@ -93,6 +94,13 @@ def turn_radius_helper(v):
         return 0.001800 - 0.40e-6 * v
     else:
         return 0.0
+    
+def sign(x):
+    """Returns the sign of a number"""
+    if x <= 0:
+        return -1
+    else:
+        return 1
 
 
     

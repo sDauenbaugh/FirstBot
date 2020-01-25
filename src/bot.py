@@ -5,7 +5,7 @@ from rlbot.utils.structures.game_data_struct import GameTickPacket
 
 from util.orientation import Orientation, relative_location
 from util.vec import Vec3
-from util.util import predict_ball_path
+from util.util import predict_ball_path, sign
 
 from states import *
 
@@ -71,8 +71,9 @@ class MyBot(BaseAgent):
         self.me = Car()
         self.ball = Ball()
         
-        self.state = BallChase()
+        self.state = Shoot()
         self.controller = groundController
+        self.stateMessage = "Whoops"
 
     def get_output(self, gamePacket: GameTickPacket) -> SimpleControllerState:
         """Calculates the next set of commands for the bot.
@@ -88,10 +89,21 @@ class MyBot(BaseAgent):
             
         """
         self.preprocess(gamePacket)
+                
+        if self.state.expired == True:
+            if Shoot().checkAvailable(self) == True:
+                self.state = Shoot()
+                self.stateMessage = "Shooting"
+            else:
+                self.state = BallChase()
+                self.stateMessage = "Chasing"
         controller_state = self.state.execute(self)
         
+        team = sign(self.team)
+        ball_side = sign(self.ball.location.y)
+        
         my_car = gamePacket.game_cars[self.index]
-        message = f"speed: {controller_state.throttle} | turn: {controller_state.steer}"
+        message = f"{self.stateMessage} | Team {team} | Ball {ball_side} "
         action_display = message
         ball_path = predict_ball_path(self)
         draw_debug(self.renderer, my_car, gamePacket.game_ball, action_display, ball_path)
