@@ -41,6 +41,18 @@ class State():
             
         """
         pass
+    
+    def checkAvailable(self, agent):
+        """Checks to see if the state is available. The default state is unavailable
+        
+        Attributes:
+            agent (BaseAgent): the bot
+        
+        Returns:
+            bool: False unless overridden. True means available, false means unavailable.
+        
+        """
+        return False
 
 class BallChase(State):
     """BallChase aims to drive the car straight toward the ball
@@ -48,13 +60,17 @@ class BallChase(State):
     This State has no regard for other cars or the movement of the ball. This is a simple state not meant for use in-game.
     
     Note:
-        Expires after 30 ticks
+        This state is always available and expires after every tick.
     
     """
     def __init__(self):
         """Creates an unexpired instance of BallChase"""
         super().__init__()
         self.ticks = 0
+        
+    def checkAvailable(self, agent):
+        """This state is always available"""
+        return True
         
     def checkExpire(self):
         """Determines if the state is no longer useful"""
@@ -114,7 +130,7 @@ class Shoot(State):
         self.checkExpire(agent)
         
         team = util.sign(agent.team)
-        targetGoal = util.GOAL_POSITION
+        targetGoal = util.GOAL_CENTER
         targetGoal.y = targetGoal.y * team
         
         ball_to_goal = targetGoal - agent.ball.location
@@ -136,7 +152,7 @@ def groundController(agent, target_location):
     """Gives a set of commands to move the car along the ground toward a target location
     
     Attributes:
-        target_location (Vec3): The location the car wants to aim for
+        target_location (Vec3): The local location the car wants to aim for
         
     Returns:
         SimpleControllerState: the set of commands to achieve the goal
