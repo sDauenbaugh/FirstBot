@@ -9,9 +9,12 @@ FIELD_HEIGHT = 2044 #uu
 
 """Goal Dimensions"""
 GOAL_WIDTH = 1786 #uu
+GOAL_POST = 893 #uu
 GOAL_HEIGHT = 643 #uu
 GOAL_HEIGHT_EXACT = 642.775 #uu
-GOAL_POSITION = Vec3(0, 5120, GOAL_HEIGHT/2) #This position is the center of the orange goal. Multiply y by -1 for blue goal.
+GOAL_HOME = Vec3(0, 5120, 0)
+GOAL_CENTER = Vec3(0, 5120, GOAL_HEIGHT/2) #This position is the center of the orange goal. Multiply y by -1 for blue goal.
+GOAL_UNIT_NORMAL = Vec3(0, 1, 0)
 
 """Boost Pad Measurements"""
 BOOST_HEIGHT_SMALL = 165 #uu
@@ -101,6 +104,33 @@ def sign(x):
         return -1
     else:
         return 1
-
+    
+def back_wall_intersect(velocity: Vec3, location: Vec3):
+    """Gets an object's point of intersection with the back wall
+    
+    Attributes:
+        velocity (Vec3): The direction of movement of the object
+        location (Vec3): The current location of the object
+        
+    Returns:
+        Vec3: The point of intersection with the back wall. The back wall is the wall containing a goal, where
+            the line drawn from the current location intersects the wall. If the back wall will not be
+            intersected, then the Vec3 will be empty. For mathematical simplicity, this function assumes that a 
+            velocity normal to the wall at less than 0.1 uu/s will not contact the back wall
+        
+        In other words, if the ball is rolling toward blue, the blue back wall is considered to be the back wall
+        regardless of which side of the field the ball is on.
+        
+        A positive y value symbolizes orange, negative symbolizes the blue wall.
+        
+        Assumes the object travels in a straight line
+    
+    """
+    if math.fabs(velocity.y) < 0.1:
+        return Vec3(0,0,0)
+    wall = GOAL_UNIT_NORMAL * (FIELD_LENGTH / 2) * sign(velocity.y)
+    time = (wall.y - location.y) / velocity.y
+    intersect = location + velocity * time
+    return intersect
 
     
