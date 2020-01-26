@@ -4,6 +4,7 @@ from rlbot.agents.base_agent import SimpleControllerState
 import util.util as util
 from util.vec import Vec3
 from util.orientation import relative_location
+from util.util import predict_ball_path
 
 
 class State():
@@ -118,20 +119,11 @@ class Shoot(State):
             return False
         
     def execute(self, agent):
-        """Drafts a set of commands to shoot the ball toward the opponent's goal
-        
-        Attributes:
-            agent (BaseAgent): the bot
-            
-        Returns:
-            SimpleControllerState: The next set of commands to execute.
-        
-        """
+        """Attempts to hit the ball in a way that pushes it toward the goal"""
         self.checkExpire(agent)
         
         team = util.sign(agent.team)
-        targetGoal = util.GOAL_CENTER
-        targetGoal.y = targetGoal.y * team
+        targetGoal = util.GOAL_HOME * -team
         
         ball_to_goal = targetGoal - agent.ball.location
         #distance_to_goal = ball_to_goal.length()
@@ -140,13 +132,44 @@ class Shoot(State):
         aim_location = agent.ball.location - (direction_to_goal * util.BALL_RADIUS)
         local_target = relative_location(agent.me.location, agent.me.rotation, aim_location)
         
-        return groundController(agent, local_target)
+        return agent.controller(agent, local_target)
     
 class Defend(State):
     """Defend attempts to divert the ball away from the bot's own goal"""
     def __init__(self):
         """Creates an instance of Defend"""
         super().__init__()
+        
+    def checkAvailable(self, agent):
+        """Available when the ball is on the friendly side of the field"""
+        if util.sign(agent.ball.location.y) == util.sign(agent.team):
+            return True
+        return False
+    
+    def checkExpired(self, agent):
+        if util.sign(agent.ball.location.y) != util.sign(agent.team):
+            self.expired = True
+    
+    def execute(self, agent):
+        self.checkExpired(agent)
+        team = util.sign(agent.team)
+        ball_path = predict_ball_path(agent)
+        danger = False
+        for loc in ball_path:
+            if(math.fabs(loc.y) > math.fabs(util.FIELD_LENGTH / 2)):
+                danger = True
+        target_location = agent.ball.local_location
+        if danger:
+            #aim to hit ball to the side
+            #detect of ball is east or west of bot
+            east_multiplier = util.sign(agent.ball.location.x - agent.me.location.x)
+            #aim for side of the ball
+            aim_location = agent.ball.location + Vec3(east_multiplier * util.BALL_RADIUS, 0, 0)
+            target_location = relative_location(agent.me.location, agent.me.rotation, aim_location)
+        elif agent.ball.local_location.length() > 500:
+            #get in goal
+            target_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME * team)
+        return agent.controller(agent, target_location)
     
 def groundController(agent, target_location):
     """Gives a set of commands to move the car along the ground toward a target location

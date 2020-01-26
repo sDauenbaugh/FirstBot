@@ -94,6 +94,9 @@ class MyBot(BaseAgent):
             if Shoot().checkAvailable(self) == True:
                 self.state = Shoot()
                 self.stateMessage = "Shooting"
+            elif Defend().checkAvailable(self) == True:
+                self.state = Defend()
+                self.stateMessage = "Defending"
             else:
                 self.state = BallChase()
                 self.stateMessage = "Chasing"
