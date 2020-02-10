@@ -47,6 +47,10 @@ BALL_RADIUS_EXACT = 92.75 #uu
 BALL_RADIUS = 93 #uu
 BALL_RESTITUTION_COEFFIECIENT = 0.6
 
+"""Teams"""
+TEAM_ORANGE = 1
+TEAM_BLUE = 0
+
 def predict_ball_path(agent):
     """Predicts the path of the ball using the rlBot framework
     
