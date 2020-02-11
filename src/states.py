@@ -181,18 +181,18 @@ class AimShot(State):
     def checkAvailable(self, agent):
         """If the ball is between the car and the goal, it is possible to shoot"""
         ballDirection = agent.ball.local_location
-        goal_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME*util.sign(agent.team))
+        goal_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME*util.sign(agent.team)*-1)
         angle = ballDirection.ang_to(goal_location)
-        if angle < (math.pi / 3):
+        if angle < (math.pi / 2):
             return True
         return False
     
     def checkExpired(self, agent, team):
         """If the ball is not reasonably close to being between the car and the goal, the state expires"""
         ballDirection = agent.ball.local_location
-        goal_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME*team)
+        goal_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME*team*-1)
         angle = ballDirection.ang_to(goal_location)
-        if angle < (math.pi / 3):
+        if angle < (math.pi / 2):
             return False
         return True
     
@@ -200,7 +200,7 @@ class AimShot(State):
         team = util.sign(agent.team)
         self.expired = self.checkExpired(agent, team)
         
-        return shotController(agent, util.GOAL_HOME*team)
+        return shotController(agent, util.GOAL_HOME*team*-1)
     
 def groundController(agent, target_location):
     """Gives a set of commands to move the car along the ground toward a target location
@@ -294,22 +294,38 @@ def shotController(agent, shotTarget):
     
     #flipping
     if(flipReady):
-        time_diff = time.time() - agent.start()
+        time_diff = time.time() - agent.timer1
         if time_diff > 2.2:
-            agent.start = time.time()
+            agent.timer1 = time.time()
         elif time_diff <= 0.1:
             #jump and turn toward the ball
             controllerState.jump = True
-            #find yaw rotation and execute
+            if ball_angle > 0:
+                controllerState.yaw = -1
+            elif ball_angle < 0:
+                controllerState.yaw = 1
         elif time_diff >= 0.1 and time_diff <= 0.15:
             #keep turning
             controllerState.jump = False
+            if ball_angle > 0:
+                controllerState.yaw = -1
+            elif ball_angle < 0:
+                controllerState.yaw = 1
         elif time_diff > 0.15 and time_diff < 1:
             #flip
             controllerState.jump = True
-            controllerState.pitch = -1
+            if ball_angle > 0:
+                controllerState.yaw = -1
+            elif ball_angle < 0:
+                controllerState.yaw = 1
+            if math.fabs(ball_angle) > math.pi:
+                controllerState.pitch = 1
+            else:
+                controllerState.pitch = -1
         else:
             flipReady = False
             controllerState.jump = False
+    else:
+        controllerState = groundController(agent, ball_direction)
     
     return controllerState

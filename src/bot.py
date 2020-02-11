@@ -1,4 +1,5 @@
 import math
+import time
 
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket
@@ -74,6 +75,8 @@ class MyBot(BaseAgent):
         self.state = Shoot()
         self.controller = groundController
         self.stateMessage = "Whoops"
+        
+        self.timer1 = time.time()
 
     def get_output(self, gamePacket: GameTickPacket) -> SimpleControllerState:
         """Calculates the next set of commands for the bot.
@@ -91,9 +94,12 @@ class MyBot(BaseAgent):
         self.preprocess(gamePacket)
                 
         if self.state.expired == True:
-            if Shoot().checkAvailable(self) == True:
-                self.state = Shoot()
-                self.stateMessage = "Shooting"
+            if AimShot().checkAvailable(self) == True:
+                self.state = AimShot()
+                self.stateMessage = "Aiming"
+            #if Shoot().checkAvailable(self) == True:
+            #    self.state = Shoot()
+            #    self.stateMessage = "Shooting"
             elif Defend().checkAvailable(self) == True:
                 self.state = Defend()
                 self.stateMessage = "Defending"
