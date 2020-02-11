@@ -167,9 +167,11 @@ class Defend(State):
             #aim for side of the ball
             aim_location = agent.ball.location + Vec3(east_multiplier * util.BALL_RADIUS, 0, 0)
             target_location = relative_location(agent.me.location, agent.me.rotation, aim_location)
-        elif agent.ball.local_location.length() > 500:
+        elif agent.ball.local_location.length() > 1500:
             #get in goal
             target_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME * team)
+        elif agent.ball.local_location.length() < 500:
+            return shotController(agent, util.GOAL_HOME * -team)
         return groundController(agent, target_location)
     
 class AimShot(State):
@@ -181,7 +183,7 @@ class AimShot(State):
     def checkAvailable(self, agent):
         """If the ball is between the car and the goal, it is possible to shoot"""
         ballDirection = agent.ball.local_location
-        goal_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME*util.sign(agent.team)*-1)
+        goal_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME*-util.sign(agent.team))
         angle = ballDirection.ang_to(goal_location)
         if angle < (math.pi / 2):
             return True
@@ -190,7 +192,7 @@ class AimShot(State):
     def checkExpired(self, agent, team):
         """If the ball is not reasonably close to being between the car and the goal, the state expires"""
         ballDirection = agent.ball.local_location
-        goal_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME*team*-1)
+        goal_location = relative_location(agent.me.location, agent.me.rotation, util.GOAL_HOME*-team)
         angle = ballDirection.ang_to(goal_location)
         if angle < (math.pi / 2):
             return False
@@ -228,9 +230,9 @@ def groundController(agent, target_location):
     r2 = 1000
     if distance <= r1:
         #calculate turn direction
-        if(angle > math.pi/16):
+        if(angle > 0):
             turn_rate = -1.0
-        elif(angle < -math.pi/16):
+        elif(angle < 0):
             turn_rate = 1.0
         #if toward ball move forward
         if(abs(angle) < math.pi / 4):
@@ -241,22 +243,27 @@ def groundController(agent, target_location):
     #if far away, move at full speed forward
     elif distance >= r2:
         speed = 1.0
-        if(angle > math.pi/12):
+        if agent.me.velocity.length() < 2250:
+            controllerState.boost = True
+        if(angle > math.pi/32):
             turn_rate = -1.0
-        elif(angle < -math.pi/12):
+        elif(angle < -math.pi/32):
             turn_rate = 1.0
     #if mid range, adjust forward
     else:
         #adjust angle
-        if(angle > math.pi/12):
+        if(angle > math.pi/32):
             turn_rate = -1.0
-        elif(angle < -math.pi/12):
+        elif(angle < -math.pi/32):
             turn_rate = 1.0
         #adjust speed
+        if agent.me.velocity.length() < 2250:
+            controllerState.boost = True
         if abs(angle) < math.pi / 2:
             speed = 1.0
         else:
             speed = 0.5
+            
             
     controllerState.throttle = speed
     controllerState.steer = turn_rate
@@ -284,10 +291,10 @@ def shotController(agent, shotTarget):
     elif ball_angle < -math.pi:
         ball_angle += 2*math.pi
     #get target distance and angle from ball
-    ball_to_target = agent.ball.location - shotTarget
+    ball_to_target = shotTarget - agent.ball.location
     target_distance = ball_to_target.length()
     ball_to_target_unit = ball_to_target.normalized()
-    if(ball_distance < 270):
+    if(ball_distance < 400):
         flipReady = True
     else:
         flipReady = False
@@ -326,6 +333,8 @@ def shotController(agent, shotTarget):
             flipReady = False
             controllerState.jump = False
     else:
-        controllerState = groundController(agent, ball_direction)
+        aim_location = agent.ball.location - (ball_to_target_unit * util.BALL_RADIUS)
+        local_target = relative_location(agent.me.location, agent.me.rotation, aim_location)
+        controllerState = groundController(agent, local_target)
     
     return controllerState
